@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Asistan — Belge Sorgulama</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131a;
+      --surface2:  #1c1c28;
+      --border:    #2a2a3d;
+      --accent:    #7c3aed;
+      --accent2:   #a78bfa;
+      --accent-glow: rgba(124,58,237,0.25);
+      --text:      #e8e8f0;
+      --muted:     #6b7280;
+      --user-msg:  #1e1b4b;
+      --bot-msg:   #13131a;
+      --radius:    16px;
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ─── LAYOUT ─── */
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .header-text h1 { font-size: 17px; font-weight: 600; }
+    .header-text p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .stat-badge {
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--accent2);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .stat-badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    /* ─── CHAT AREA ─── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--muted);
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .empty-state .icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      box-shadow: 0 0 40px var(--accent-glow);
+      margin-bottom: 8px;
+    }
+    .empty-state h2 { font-size: 20px; color: var(--text); font-weight: 600; }
+    .empty-state p  { font-size: 14px; max-width: 340px; line-height: 1.6; }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .suggestion-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .suggestion-btn:hover {
+      border-color: var(--accent);
+      background: var(--user-msg);
+      color: var(--accent2);
+    }
+
+    /* ─── MESSAGES ─── */
+    .message {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      animation: slideIn .3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .user .avatar  { background: linear-gradient(135deg, var(--accent), #2563eb); }
+    .bot  .avatar  { background: var(--surface2); border: 1px solid var(--border); }
+
+    .bubble {
+      max-width: 75%;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.7;
+      position: relative;
+    }
+    .user .bubble {
+      background: var(--user-msg);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-bottom-right-radius: 4px;
+      color: #c4b5fd;
+    }
+    .bot .bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* ─── TYPING INDICATOR ─── */
+    .typing {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 16px 18px;
+    }
+    .typing span {
+      width: 7px; height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%           { transform: translateY(-8px); opacity: 1; }
+    }
+
+    /* ─── INPUT AREA ─── */
+    .input-area {
+      padding: 16px 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .input-box {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 10px 10px 16px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      resize: none;
+      max-height: 140px;
+      line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--muted); }
+
+    /* ─── MIC & SEND BUTTONS ─── */
+    .button-group {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .mic-btn, .send-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: all .15s;
+      border: none;
+    }
+    .mic-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .mic-btn:hover { border-color: #ef4444; color: #ef4444; }
+    .mic-btn.recording {
+      background: #ef4444; color: white; border-color: #ef4444;
+      animation: pulse-red 1.5s infinite;
+    }
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+    }
+    .send-btn:hover  { transform: scale(1.08); box-shadow: 0 0 16px var(--accent-glow); }
+    .send-btn:active { transform: scale(.95); }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* ─── BETA WARNING ─── */
+    .beta-warning {
+      text-align: center;
+      font-size: 12px;
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      padding: 8px 16px;
+      border-radius: 8px;
+      margin: 16px 20px 0;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+
+    /* ─── MARKDOWN-LIKE FORMATTING ─── */
+    .bubble strong { color: var(--accent2); }
+    .bubble em     { font-style: italic; color: var(--muted); }
+    .bubble ul, .bubble ol { padding-left: 18px; margin-top: 6px; }
+    .bubble li { margin: 4px 0; }
+    .bubble code {
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--accent2);
+    }
+    .bubble p + p { margin-top: 10px; }
+
+    /* ─── ERROR ─── */
+    .error-msg { color: #f87171; }
+
+    @media (max-width: 600px) {
+      .bubble { max-width: 90%; }
+      header  { padding: 14px 16px; }
+    }
+    .loading-feedback {
+      font-style: italic;
+      color: #94a3b8; /* Slate-400 */
+      animation: pulseText 1.5s infinite;
+    }
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">🏢</div>
+    <div class="header-text">
+      <h1>KYK Akıllı Asistan</h1>
+      <p>KYK Yapı Kimyasalları Ürün Robotu (Prototip)</p>
+    </div>
+    <div class="stat-badge" id="statBadge">Yükleniyor...</div>
+  </header>
+
+  <!-- BETA UYARISI -->
+  <div class="beta-warning">
+    📚 <b>Kaynak:</b> KYK Genel-Urun-Rehberi-2026.pdf
+    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 6px; line-height: 1.4;">
+      Bu akıllı asistan; projenize, zemininize ve hava şartlarına en uygun KYK yapı kimyasalını saniyeler içinde bulmanız için tasarlanmıştır.
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area" id="chatArea">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">💬</div>
+      <h2>Belgenize soru sorun</h2>
+      <p>Yüklü belgelerden bilgi çekip yapay zeka ile cevap üretiyorum. Denemek için aşağıdaki örneklere tıklayın.</p>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="fillQuestion(this)">Sen kimsin ve bana nasıl yardımcı olabilirsin?</button>
+        <button class="suggestion-btn" onclick="fillQuestion(this)">Sıcak havalarda teraslara fayans için hangi malzeme?</button>
+        <button class="suggestion-btn" onclick="fillQuestion(this)">Nemli zemine hangi yapıştırıcı uyar?</button>
+        <button class="suggestion-btn" onclick="fillQuestion(this)">Su yalıtımı için ne tavsiye edilir?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <div class="input-box">
+      <textarea
+        id="questionInput"
+        placeholder="Belge hakkında bir şey sorun..."
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <div class="button-group">
+        <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Sesle Yaz">🎤</button>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Gönder (Enter)">➤</button>
+      </div>
+    </div>
+    <p class="input-hint">Enter ile gönder &nbsp;·&nbsp; Shift+Enter ile satır ekle</p>
+  </div>
+
+</div>
+
+<script>
+  const chatArea     = document.getElementById('chatArea');
+  const emptyState   = document.getElementById('emptyState');
+  const input        = document.getElementById('questionInput');
+  const sendBtn      = document.getElementById('sendBtn');
+  const micBtn       = document.getElementById('micBtn');
+  const statBadge    = document.getElementById('statBadge');
+
+  // ── Sesli Yazma (Web Speech API)
+  let recognizing = false;
+  let recognition = null;
+
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;   // Tek cümle alıp durur
+    recognition.interimResults = true; // Anlık dinleme
+    recognition.lang = 'tr-TR';       // Türkçe
+
+    recognition.onstart = function() {
+      recognizing = true;
+      micBtn.classList.add('recording');
+      micBtn.title = "Dinleniyor... (Durdurmak için tıklayın)";
+    };
+
+    recognition.onresult = function(event) {
+      let current_interim = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          // Kesinleşmiş sözleri asıl değere ekle
+          input.value = (input.value + ' ' + event.results[i][0].transcript).trim();
+        } else {
+          // Henüz kesinleşmemiş anlık sözler
+          current_interim += event.results[i][0].transcript;
+        }
+      }
+      
+      // Geçici sözleri textarea'da göstermek için bir span yapamayız ama 
+      // direkt value içine append edip kesinleşince temizleyemesek de
+      // en iyi yol cursor arkasına anlık yazdırmaktır. Ancak textarea'da 
+      // interim göstermek için placeholder veya value güncellemesi yaparız:
+    };
+
+    recognition.onerror = function(event) {
+      console.error("Ses tanıma hatası:", event.error);
+      micBtn.classList.remove('recording');
+    };
+
+    recognition.onend = function() {
+      recognizing = false;
+      micBtn.classList.remove('recording');
+      micBtn.title = "Sesle Yaz";
+      // Cümle bitince otomatik gönderilmese daha iyi, kullanıcı kontrol etsin
+    };
+  } else {
+    micBtn.style.display = 'none'; // Tarayıcı desteklemiyorsa gizle
+  }
+
+  let final_text = '';
+
+  function toggleMic() {
+    if (!recognition) return;
+    if (recognizing) {
+      recognition.stop();
+      return;
+    }
+    // KAYIT BAŞLAMADAN ÖNCE:
+    // Yazılana dokunma (silme), anlık dinlemeyi başlat
+    final_text = input.value; 
+    
+    recognition.onresult = function(event) {
+      let interim_transcript = '';
+      let current_final = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          current_final += event.results[i][0].transcript;
+        } else {
+          interim_transcript += event.results[i][0].transcript;
+        }
+      }
+      
+      // Kesinleşmiş metni ana metinle birleştir
+      if (current_final) {
+        final_text = (final_text + ' ' + current_final).trim();
+      }
+      
+      // Ekranda hem kesinleşen hem anlık olanı (interim) göster
+      // Böylece kullanıcı konuştuğu an kelimeleri akarken görür
+      input.value = (final_text + ' ' + interim_transcript).trim();
+      autoResize(input);
+    };
+
+    recognition.start();
+  }
+
+  // ── İstatistikleri yükle
+  fetch('/istatistik')
+    .then(r => r.json())
+    .then(d => { statBadge.textContent = `${d.toplam_parca} parça yüklü`; })
+    .catch(() => { statBadge.textContent = 'Çevrimiçi'; });
+
+  // ── Öneri butonları
+  function fillQuestion(btn) {
+    input.value = btn.textContent;
+    input.focus();
+    autoResize(input);
+  }
+
+  // ── Enter/Shift+Enter
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  // ── Textarea otomatik büyü
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  // ── Mesaj ekle
+  function addMessage(role, content) {
+    if (emptyState) emptyState.style.display = 'none';
+
+    const msg  = document.createElement('div');
+    msg.className = `message ${role}`;
+
+    const avatar = role === 'user' ? '👤' : '🤖';
+    msg.innerHTML = `
+      <div class="avatar">${avatar}</div>
+      <div class="bubble">${renderText(content)}</div>
+    `;
+    chatArea.appendChild(msg);
+    scrollBottom();
+    return msg;
+  }
+
+  // ── Yazıyor göstergesi
+  function addTyping() {
+    const msg = document.createElement('div');
+    msg.className = 'message bot';
+    msg.id = 'typing';
+    msg.innerHTML = `
+      <div class="avatar">🤖</div>
+      <div class="bubble">
+        <div class="typing"><span></span><span></span><span></span></div>
+      </div>
+    `;
+    chatArea.appendChild(msg);
+    scrollBottom();
+  }
+  function removeTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  }
+
+  // ── Basit metin formatlama
+  function renderText(text) {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Scroll
+  function scrollBottom() {
+    setTimeout(() => chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' }), 50);
+  }
+
+  // ── ANA GÖNDER FONKSİYONU
+  async function sendMessage() {
+    const soru = input.value.trim();
+    if (!soru || sendBtn.disabled) return;
+
+    // UI kilitlensin
+    sendBtn.disabled = true;
+    input.value = '';
+    autoResize(input);
+
+    addMessage('user', soru);
+    
+    // YENİ PROGRESSIVE STREAMING MANTIĞI
+    const botMsgDiv = addMessage('bot', '');
+    const bubbleDiv = botMsgDiv.querySelector('.bubble');
+    bubbleDiv.classList.add('loading-feedback');
+    bubbleDiv.innerText = 'Soru analiz ediliyor... ⏳';
+    
+    let streamStarted = false;
+    const t1 = setTimeout(() => {
+        if (!streamStarted) bubbleDiv.innerText = 'KYK Ürün Kataloğu taranıyor... 🔍';
+    }, 2000);
+    const t2 = setTimeout(() => {
+        if (!streamStarted) bubbleDiv.innerText = 'Cevap sentezleniyor... ✍️';
+    }, 4000);
+
+    try {
+      const res = await fetch('/sor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soru })
+      });
+
+      if (!res.ok) {
+        clearTimeout(t1); clearTimeout(t2);
+        try {
+            const data = await res.json();
+            bubbleDiv.innerHTML = renderText(`⚠️ HATA: ${data.detail || 'Bir hata oluştu.'}`);
+        } catch {
+            bubbleDiv.innerHTML = renderText('⚠️ HATA: Sunucu hatası oluştu.');
+        }
+        sendBtn.disabled = false; input.focus(); return;
+      }
+
+      // ReadableStream OKUMA İŞLEMİ
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let textContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        if (!streamStarted) {
+          streamStarted = true;
+          clearTimeout(t1);
+          clearTimeout(t2);
+          bubbleDiv.classList.remove('loading-feedback');
+          bubbleDiv.innerHTML = '';
+        }
+
+        textContent += decoder.decode(value, { stream: true });
+        bubbleDiv.innerHTML = renderText(textContent);
+        scrollBottom();
+      }
+
+    } catch (err) {
+      clearTimeout(t1); clearTimeout(t2);
+      bubbleDiv.innerHTML = renderText('⚠️ HATA: Sunucuya ulaşılamadı veya yoğunluktan dolayı zaman aşımına uğradı. Güncelleme denemesi nedeniyle bekliyoruz.');
+    }
+
+    sendBtn.disabled = false;
+    input.focus();
+  }
+</script>
+</body>
+</html>
