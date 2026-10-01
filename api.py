@@ -22,8 +22,8 @@ chroma = chromadb.PersistentClient(path="veritabani")
 koleksiyon = chroma.get_or_create_collection("belgelerim")
 
 EMBEDDING_MODEL = "models/gemini-embedding-001"
-LLM_MODEL       = "gemini-2.5-flash"
 
+LLM_MODEL = "gemini-3.8-flash"
 # FastAPI Uygulama ve Middleware Tanımlamaları
 app = FastAPI(title="RAG Asistan API", version="1.0.0")
 
