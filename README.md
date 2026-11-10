@@ -6,7 +6,7 @@ Bu proje, mimarların, bayilerin ve mühendislerin yüzlerce sayfalık teknik do
 
 Güncel endüstriyel ürün katalogları ve teknik uygulama rehberleri çok spesifik çevresel şartlar (sıcaklık, zemin türü, nem oranı) barındırır. Bu sistemin vizyonu, kullanıcının "Sıcak bir iklimde dış cephe için ne kullanmalıyım?" sorusuna karşılık, arka planda kapsamlı kurumsal teknik ürün rehberini tarayıp saniyeler içinde anında, anlaşılır ve %100 dokümana sadık teknik bir cevap üretmesidir.
 
-[![Canlı Demo](https://img.shields.io/badge/Canl%C4%B1%20Demo-%C4%B0ncelemek%20%C4%B0%C3%A7in%20T%C4%B1kla-success?style=for-the-badge&logo=vercel&logoColor=white)](https://kyk-demo-production.up.railway.app/)
+[![Canlı Demo](https://kyk-demo-1.onrender.com/)](https://kyk-demo-1.onrender.com/)
 
 ## 🛠️ Teknoloji Stack'i
 
@@ -23,9 +23,9 @@ Bu sistem, veri madenciliği ve modern backend endüstrisinin güncel araçları
 Projenin internete açık bir Web servisi olarak çalıştırılması için hantal VPS metotları yerine modern geliştiricilerin tercihi olan **Railway.app** kullanılmıştır. Yayınlamak son derece basittir:
 
 1. Bu projeyi kendi GitHub hesabınıza aktarın (fork / push).
-2. [Railway.app](https://railway.app/) üzerinden GitHub reposunu projeye bağlayın.
+2. [Render.com]([https://railway.app/](https://dashboard.render.com/)) üzerinden GitHub reposunu projeye bağlayın.
 3. Güvenlik ve gizlilik best-practice'leri gereği, Railway'in `Variables` bölümünden `GEMINI_API_KEY` atamasını gerçekleştirin.
-4. Railway projeyi otomatik olarak izole bir konteynerde çalıştıracak ve global erişim linkini saniyeler içinde sizinle paylaşacaktır.
+4. Render projeyi otomatik olarak izole bir konteynerde çalıştıracak ve global erişim linkini saniyeler içinde sizinle paylaşacaktır.
 
 > **Local (Yerel) Geliştirme İçin:** Bilgisayarınızda test etmek isterseniz bir `.env` dosyası oluşturup Google Cloud üzerinden aldığınız API anahtarını içerisine eklemeniz yeterlidir.
 
