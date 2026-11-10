@@ -6,7 +6,7 @@ Bu proje, mimarların, bayilerin ve mühendislerin yüzlerce sayfalık teknik do
 
 Güncel endüstriyel ürün katalogları ve teknik uygulama rehberleri çok spesifik çevresel şartlar (sıcaklık, zemin türü, nem oranı) barındırır. Bu sistemin vizyonu, kullanıcının "Sıcak bir iklimde dış cephe için ne kullanmalıyım?" sorusuna karşılık, arka planda kapsamlı kurumsal teknik ürün rehberini tarayıp saniyeler içinde anında, anlaşılır ve %100 dokümana sadık teknik bir cevap üretmesidir.
 
-[![Canlı Demo](https://kyk-demo-1.onrender.com/)](https://kyk-demo-1.onrender.com/)
+[![Canlı Demo](https://shields.io)](https://kyk-demo-1.onrender.com/)
 
 ## 🛠️ Teknoloji Stack'i
 
